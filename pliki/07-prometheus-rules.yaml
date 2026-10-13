@@ -1,0 +1,146 @@
+# Reguły Prometheusa do importu jako Grafana-managed (moduł 7, ćwiczenie 12).
+#
+# Źródło: lab/application-alerts.yaml (PrometheusRule labu, w klastrze niewdrożony; grupy
+# application_slo_alerts i application_service_alerts) w formacie pliku reguł
+# Prometheusa (`groups:`). Zmiany względem oryginału:
+#   - `service` -> `service_name` (jest na wszystkich seriach span metrics; `service` nie mają serie Beyli),
+#   - etykieta `owner: LOGIN` na każdej regule,
+#   - nazwy grup z prefiksem `LOGIN-`.
+#
+# LOGIN zamieniasz na swój login, np.:
+#   sed "s/LOGIN/$LOGIN/g" pliki/07-prometheus-rules.yaml
+#
+# Grupy nie mają `query_offset`, więc Grafana dokleja domyślny offset
+# `[unified_alerting.prometheus_conversion] rule_query_offset = 1m`.
+# Wariant z `limit: 10` (odrzucany przez import) jest w osobnym pliku
+# pliki/07-prometheus-rules-limit.yaml — jedna grupa z `limit` blokuje cały request.
+groups:
+  - name: LOGIN-application-slo
+    interval: 1m
+    rules:
+      - alert: ServiceHighErrorRate
+        expr: |
+          sum(rate(traces_spanmetrics_calls_total{status_code="STATUS_CODE_ERROR"}[5m])) by (service_name)
+          /
+          sum(rate(traces_spanmetrics_calls_total[5m])) by (service_name) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          owner: LOGIN
+        annotations:
+          summary: Service has high error rate
+          description: Service {{ $labels.service_name }} has {{ $value | humanizePercentage }} error rate.
+      - alert: ServiceHighErrorRateWarning
+        expr: |
+          sum(rate(traces_spanmetrics_calls_total{status_code="STATUS_CODE_ERROR"}[5m])) by (service_name)
+          /
+          sum(rate(traces_spanmetrics_calls_total[5m])) by (service_name) > 0.01
+        for: 10m
+        labels:
+          severity: warning
+          owner: LOGIN
+        annotations:
+          summary: Service error rate elevated
+          description: Service {{ $labels.service_name }} has {{ $value | humanizePercentage }} error rate.
+      - alert: ServiceHighLatencyP95
+        expr: |
+          histogram_quantile(0.95, sum(rate(traces_spanmetrics_latency_bucket[5m])) by (le, service_name)) > 2
+        for: 5m
+        labels:
+          severity: warning
+          owner: LOGIN
+        annotations:
+          summary: Service P95 latency is high
+          description: Service {{ $labels.service_name }} P95 latency is {{ $value }}s.
+      - alert: ServiceHighLatencyP99
+        expr: |
+          histogram_quantile(0.99, sum(rate(traces_spanmetrics_latency_bucket[5m])) by (le, service_name)) > 5
+        for: 5m
+        labels:
+          severity: critical
+          owner: LOGIN
+        annotations:
+          summary: Service P99 latency is very high
+          description: Service {{ $labels.service_name }} P99 latency is {{ $value }}s.
+      - alert: ServiceNoTraffic
+        expr: |
+          sum(rate(traces_spanmetrics_calls_total[10m])) by (service_name) == 0
+        for: 10m
+        labels:
+          severity: warning
+          owner: LOGIN
+        annotations:
+          summary: Service has no traffic
+          description: Service {{ $labels.service_name }} has received no requests in the last 10 minutes.
+      - alert: ServiceTrafficDrop
+        expr: |
+          (
+            sum(rate(traces_spanmetrics_calls_total[5m])) by (service_name)
+            /
+            sum(rate(traces_spanmetrics_calls_total[5m] offset 1h)) by (service_name)
+          ) < 0.5
+        for: 10m
+        labels:
+          severity: warning
+          owner: LOGIN
+        annotations:
+          summary: Service traffic dropped significantly
+          description: Service {{ $labels.service_name }} traffic dropped by {{ $value | humanizePercentage }}.
+
+  - name: LOGIN-application-services
+    interval: 1m
+    rules:
+      - alert: FrontendServiceDown
+        expr: |
+          (sum(kube_deployment_status_replicas_available{namespace="otel", deployment="frontend"}) or vector(0)) == 0
+        for: 2m
+        labels:
+          severity: critical
+          owner: LOGIN
+        annotations:
+          summary: Frontend service is down
+          description: Frontend service has no running pods.
+      - alert: CheckoutServiceHighErrors
+        expr: |
+          sum(rate(traces_spanmetrics_calls_total{status_code="STATUS_CODE_ERROR", service_name=~".*checkout.*"}[5m]))
+          /
+          sum(rate(traces_spanmetrics_calls_total{service_name=~".*checkout.*"}[5m])) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+          owner: LOGIN
+        annotations:
+          summary: Checkout service has high errors
+          description: Checkout service error rate is {{ $value | humanizePercentage }}.
+      - alert: PaymentServiceHighErrors
+        expr: |
+          sum(rate(traces_spanmetrics_calls_total{status_code="STATUS_CODE_ERROR", service_name=~".*payment.*"}[5m]))
+          /
+          sum(rate(traces_spanmetrics_calls_total{service_name=~".*payment.*"}[5m])) > 0.01
+        for: 2m
+        labels:
+          severity: critical
+          owner: LOGIN
+        annotations:
+          summary: Payment service has high errors
+          description: Payment service error rate is {{ $value | humanizePercentage }}.
+      - alert: CartServiceHighLatency
+        expr: |
+          histogram_quantile(0.95, sum(rate(traces_spanmetrics_latency_bucket{service_name=~".*cart.*"}[5m])) by (le)) > 1
+        for: 5m
+        labels:
+          severity: warning
+          owner: LOGIN
+        annotations:
+          summary: Cart service latency is high
+          description: Cart service P95 latency is {{ $value }}s.
+      - alert: ProductCatalogServiceHighLatency
+        expr: |
+          histogram_quantile(0.95, sum(rate(traces_spanmetrics_latency_bucket{service_name=~".*productcatalog.*|.*product-catalog.*"}[5m])) by (le)) > 1
+        for: 5m
+        labels:
+          severity: warning
+          owner: LOGIN
+        annotations:
+          summary: Product catalog service latency is high
+          description: Product catalog service P95 latency is {{ $value }}s.

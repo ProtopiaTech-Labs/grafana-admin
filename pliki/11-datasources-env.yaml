@@ -1,0 +1,47 @@
+# Walkthrough: jedno hasło Pa$sw0rd, trzy zapisy w pliku provisioningu datasource'ów.
+# Do czytania (ćwiczenie 02 modułu 11, ⭐Stretch). Nie wdrażasz: katalog provisioning
+# Labu wspólnego nie jest dostępny dla uczestników.
+#
+# Środowisko procesu Grafany ma DB_PASSWORD=Pa$sw0rd (dokładnie te znaki).
+# Przewidź secureJsonData.password każdego datasource'a po provisioningu (lekcja 01).
+apiVersion: 1
+
+datasources:
+  - name: pg-env-dolar
+    uid: pg-env-dolar
+    type: grafana-postgresql-datasource
+    access: proxy
+    url: postgres.example.internal:5432
+    user: grafana_ro
+    jsonData:
+      database: app
+      sslmode: require
+    secureJsonData:
+      password: $DB_PASSWORD
+    editable: false
+
+  - name: pg-env-klamry
+    uid: pg-env-klamry
+    type: grafana-postgresql-datasource
+    access: proxy
+    url: postgres.example.internal:5432
+    user: grafana_ro
+    jsonData:
+      database: app
+      sslmode: require
+    secureJsonData:
+      password: ${DB_PASSWORD}
+    editable: false
+
+  - name: pg-literal
+    uid: pg-literal
+    type: grafana-postgresql-datasource
+    access: proxy
+    url: postgres.example.internal:5432
+    user: grafana_ro
+    jsonData:
+      database: app
+      sslmode: require
+    secureJsonData:
+      password: 'Pa$$sw0rd'
+    editable: false

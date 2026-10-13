@@ -1,0 +1,67 @@
+{
+  "apiVersion": "dashboard.grafana.app/v1",
+  "kind": "Dashboard",
+  "metadata": {
+    "name": "service-health-LOGIN"
+  },
+  "spec": {
+    "title": "Service health LOGIN",
+    "description": "Moduł 11, ćwiczenie 05. Dashboard dostarczony commitem do repozytorium Git Sync. Span metrics OTel Demo (namespace otel) z Tempo metrics-generator.",
+    "tags": ["szkolenie", "modul-11", "git-sync"],
+    "editable": true,
+    "schemaVersion": 41,
+    "timezone": "browser",
+    "graphTooltip": 1,
+    "refresh": "",
+    "time": { "from": "now-1h", "to": "now" },
+    "annotations": { "list": [] },
+    "templating": { "list": [] },
+    "links": [],
+    "panels": [
+      {
+        "id": 1,
+        "type": "timeseries",
+        "title": "Żądania na sekundę (SERVER)",
+        "gridPos": { "x": 0, "y": 0, "w": 12, "h": 9 },
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "editorMode": "code",
+            "expr": "sum by (service_name) (rate(traces_spanmetrics_calls_total{k8s_namespace_name=\"otel\", span_kind=\"SPAN_KIND_SERVER\"}[$__rate_interval]))",
+            "legendFormat": "{{service_name}}",
+            "range": true
+          }
+        ],
+        "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+        "options": {
+          "legend": { "displayMode": "list", "placement": "bottom", "calcs": [] },
+          "tooltip": { "mode": "multi", "sort": "desc" }
+        }
+      },
+      {
+        "id": 2,
+        "type": "timeseries",
+        "title": "Odsetek błędów (SERVER)",
+        "gridPos": { "x": 12, "y": 0, "w": 12, "h": 9 },
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "editorMode": "code",
+            "expr": "sum by (service_name) (rate(traces_spanmetrics_calls_total{k8s_namespace_name=\"otel\", span_kind=\"SPAN_KIND_SERVER\", status_code=\"STATUS_CODE_ERROR\"}[$__rate_interval])) / sum by (service_name) (rate(traces_spanmetrics_calls_total{k8s_namespace_name=\"otel\", span_kind=\"SPAN_KIND_SERVER\"}[$__rate_interval]))",
+            "legendFormat": "{{service_name}}",
+            "range": true
+          }
+        ],
+        "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0 }, "overrides": [] },
+        "options": {
+          "legend": { "displayMode": "list", "placement": "bottom", "calcs": [] },
+          "tooltip": { "mode": "multi", "sort": "desc" }
+        }
+      }
+    ]
+  }
+}

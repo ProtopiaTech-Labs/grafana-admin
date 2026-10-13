@@ -1,0 +1,36 @@
+{
+  "overwrite": false,
+  "message": "Dashboard z referencją do library panelu LOGIN-ruch-uslug",
+  "folderUid": "FOLDER_UID",
+  "dashboard": {
+    "uid": "LOGIN-lp-demo",
+    "title": "LP demo — LOGIN",
+    "tags": [
+      "szkolenie",
+      "modul-03",
+      "library-panels"
+    ],
+    "editable": true,
+    "schemaVersion": 41,
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "gridPos": {
+          "x": 0,
+          "y": 0,
+          "w": 24,
+          "h": 10
+        },
+        "title": "Ruch usług",
+        "libraryPanel": {
+          "uid": "LOGIN-ruch-uslug",
+          "name": "Ruch usług (LOGIN)"
+        }
+      }
+    ]
+  }
+}

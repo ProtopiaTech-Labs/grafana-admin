@@ -1,0 +1,105 @@
+# Moduł 8, ćwiczenie 05 — rozwiązanie: przejścia między sygnałami jako plik provisioningu.
+#
+# Poprawki z audytu (ćwiczenie 04) dla wspólnych datasource'ów Labu wspólnego
+# (uid loki / tempo / prometheus). W ćwiczeniu 05 tę samą konfigurację ustawiasz
+# przez API na kopiach loki-<login> / tempo-<login> / prometheus-<login>;
+# porównaj ich jsonData z tym plikiem (poza uid i escapowaniem "$$").
+#
+# W labie te datasource'y generuje chart Helm z wartości grafana.additionalDataSources.
+# Ten plik to docelowa postać, nie to, co jest wdrożone — audyt ma na czym pracować.
+#
+# Każde "$" w wartości piszemy jako "$$" — w plikach provisioningu Grafana podstawia
+# zmienne środowiskowe, więc pojedyncze "$" dałoby pusty ciąg. Przez API piszesz "$".
+
+apiVersion: 1
+
+datasources:
+  - name: Loki
+    uid: loki
+    type: loki
+    access: proxy
+    url: http://loki-gateway.monitoring.svc.cluster.local
+    jsonData:
+      timeout: 600
+      maxLines: 1000
+      derivedFields:
+        # Strumień stream="otel": otelcol.exporter.loki z loki.format=json,
+        # linia {"body":"…","traceid":"<32 hex>","spanid":"…",…}. Regex z dokumentacji
+        # (traceID=(\w+)) nie trafia: inna wielkość liter i format klucz=wartość.
+        - name: TraceID
+          matcherType: regex
+          matcherRegex: '"traceid":"(\w+)"'
+          datasourceUid: tempo
+          url: '$${__value.raw}'
+          urlDisplayLabel: 'Trace w Tempo'
+        # ⭐Stretch: dopasowanie po nazwie etykiety / pola parsowanego (wymaga | json w zapytaniu).
+        - name: TraceID (label)
+          matcherType: label
+          matcherRegex: 'traceid'
+          datasourceUid: tempo
+          url: '$${__value.raw}'
+          urlDisplayLabel: 'Trace w Tempo (label)'
+
+  - name: Tempo
+    uid: tempo
+    type: tempo
+    access: proxy
+    url: http://tempo-query-frontend.monitoring.svc.cluster.local:3200
+    jsonData:
+      nodeGraph:
+        enabled: true
+      serviceMap:
+        datasourceUid: prometheus
+      # Blok tracesToLogs (v1) usunięty — Grafana ignoruje go, gdy istnieje V2.
+      tracesToLogsV2:
+        datasourceUid: loki           # uid, nie nazwa datasource'a ('Loki')
+        spanStartTimeShift: '-1m'
+        spanEndTimeShift: '1m'
+        tags:
+          # Klucz = atrybut spanu/zasobu, value = etykieta w Loki. Brak klucza na spanie
+          # = brak linku (Grafana nie buduje zapytania Loki bez selektora).
+          - key: service.name
+            value: service_name
+        filterByTraceID: true         # "Logs for this trace": label_format … contains "<traceId>" __line__
+      tracesToMetrics:
+        datasourceUid: prometheus
+        spanStartTimeShift: '-2m'
+        spanEndTimeShift: '2m'
+        tags:
+          - key: service.name
+            value: service_name
+          # "name" to pseudo-tag Grafany z nazwą operacji spanu (obok spanId, traceId, duration);
+          # w span metrics Tempo ta sama wartość jest w etykiecie span_name.
+          - key: name
+            value: span_name
+          # Kopie sklepu z labu agenta SRE (userN) mają te same nazwy usług i operacji.
+          - key: k8s.namespace.name
+            value: k8s_namespace_name
+        queries:
+          - name: 'p95 tej operacji'
+            query: 'histogram_quantile(0.95, sum by (le) (rate(traces_spanmetrics_latency_bucket{$$__tags}[5m])))'
+      tracesToProfiles:
+        datasourceUid: pyroscope
+        tags: []
+        profileTypeId: 'process_cpu:cpu:nanoseconds:cpu:nanoseconds'
+        customQuery: true
+        # Profile z SDK nazywają się <namespace>.<usługa> (otel.cart, user3.cart, …):
+        # w labie działa kilka kopii sklepu obok siebie.
+        query: '{service_name="$${__span.tags["k8s.namespace.name"]}.$${__span.tags["service.name"]}"}'
+        # spanStartTimeShift / spanEndTimeShift usunięte — tracesToProfiles ich nie obsługuje
+        # (zakres = czas spanu, ±60 s przy atrybucie pyroscope.profile.id).
+        # Usługi Node.js (payment) mają tylko profile wall/memory: dla nich ten link zostaje pusty.
+
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus-and-grafana-kub-prometheus.monitoring.svc.cluster.local:9090
+    jsonData:
+      httpMethod: POST
+      exemplarTraceIdDestinations:
+        # name = nazwa etykiety exemplara; Tempo metrics-generator zapisuje traceID.
+        # Wymaga --enable-feature=exemplar-storage po stronie Prometheusa.
+        - name: traceID
+          datasourceUid: tempo
+          urlDisplayLabel: 'Trace w Tempo'

@@ -1,0 +1,14 @@
+# Wzorzec grupy szablonów z ćwiczenia 06 w formacie plików provisioningu.
+# LOGIN = Twój login. Nazwa z define jest wspólna dla całej organizacji,
+# dlatego zaczyna się od loginu. W contact poincie: {{ template "LOGIN.message" . }}
+apiVersion: 1
+templates:
+  - orgId: 1
+    name: LOGIN-szablony
+    template: |
+      {{ define "LOGIN.message" -}}
+      {{ len .Alerts.Firing }} firing, {{ len .Alerts.Resolved }} resolved (owner={{ .CommonLabels.owner }})
+      {{ range .Alerts -}}
+      [{{ .Status | toUpper }}] {{ .Labels.alertname }} / {{ .Labels.service_name }}: {{ .Annotations.summary }}
+      {{ end -}}
+      {{- end }}

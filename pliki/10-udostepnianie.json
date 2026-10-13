@@ -1,0 +1,71 @@
+{
+  "uid": "udostepnianie-m10",
+  "title": "M10 Udostepnianie",
+  "description": "Modul 10, cwiczenie 12: kolumna email ukryta transformacja Organize fields, adnotacje po tagu deploy. Bez zmiennych (shared dashboards ich nie obsluguja).",
+  "tags": ["szkolenie", "m10"],
+  "timezone": "browser",
+  "schemaVersion": 41,
+  "editable": true,
+  "time": { "from": "now-6h", "to": "now" },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      },
+      {
+        "name": "deploy",
+        "enable": true,
+        "iconColor": "red",
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "target": { "type": "tags", "tags": ["deploy"], "limit": 100, "matchAny": false }
+      }
+    ]
+  },
+  "templating": { "list": [] },
+  "panels": [
+    {
+      "id": 1,
+      "type": "table",
+      "title": "Klienci",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "datasource": { "type": "grafana-testdata-datasource", "uid": "testdata" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "grafana-testdata-datasource", "uid": "testdata" },
+          "scenarioId": "csv_content",
+          "csvContent": "klient,email,obrot\nACME,jan.kowalski@acme.example,100\nFoo,ola.nowak@foo.example,200\nBar,piotr.wisniewski@bar.example,300"
+        }
+      ],
+      "transformations": [
+        { "id": "organize", "options": { "excludeByName": { "email": true }, "indexByName": {}, "renameByName": {} } }
+      ],
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "options": { "showHeader": true }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Ruch (TestData)",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "datasource": { "type": "grafana-testdata-datasource", "uid": "testdata" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "grafana-testdata-datasource", "uid": "testdata" },
+          "scenarioId": "random_walk",
+          "seriesCount": 1,
+          "alias": "ruch"
+        }
+      ],
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single" } }
+    }
+  ]
+}

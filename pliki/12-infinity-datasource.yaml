@@ -1,0 +1,25 @@
+# Modul 12, cwiczenie 07: datasource Infinity dla API NBP jako provisioning.
+# Stan koncowy ćwiczenia: nagłówek User-Agent na poziomie datasource'a, więc
+# Allowed hosts są obowiązkowe. Bez allowedHosts każde zapytanie kończy się
+# "requested URL not allowed ..." (Infinity 4.0.0, pkg/models/settings.go).
+#
+# Plik do porównania z tym, co wyklikałeś w UI - w Labie wspólnym nie
+# provisionujesz (brak dostępu do /etc/grafana/provisioning). Na własnej
+# instancji: /etc/grafana/provisioning/datasources/infinity-nbp.yaml + restart.
+# W UI Infinity: Settings -> zakladka Main -> Provisioning Script generuje
+# podobny YAML z aktualnych ustawień.
+apiVersion: 1
+datasources:
+  - name: LOGIN-nbp
+    uid: nbp-LOGIN
+    type: yesoreyeram-infinity-datasource
+    jsonData:
+      auth_method: none
+      # Wpis musi mieć schemat i jest prefiksem pełnego URL-a zapytania:
+      # "api.nbp.pl" bez https:// nie pasuje do niczego.
+      allowedHosts:
+        - https://api.nbp.pl
+      # NBP odrzuca domyślny User-Agent backendu Infinity (Go-http-client/1.1) kodem 403
+      httpHeaderName1: User-Agent
+    secureJsonData:
+      httpHeaderValue1: grafana-szkolenie

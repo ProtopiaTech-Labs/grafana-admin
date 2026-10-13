@@ -1,0 +1,20 @@
+{
+  "apiVersion": "provisioning.grafana.app/v0alpha1",
+  "kind": "Repository",
+  "metadata": {
+    "name": "probe-LOGIN-local"
+  },
+  "spec": {
+    "title": "Sonda LOGIN local (tylko dry run)",
+    "type": "local",
+    "local": {
+      "path": "conf/provisioning"
+    },
+    "sync": {
+      "enabled": true,
+      "target": "folder",
+      "intervalSeconds": 60
+    },
+    "workflows": []
+  }
+}

@@ -1,0 +1,17 @@
+# Moduł 11, ćwiczenie 07 — plik file provisioningu datasource'ów wrzucony do repozytorium Git Sync.
+# Git Sync go nie wczyta: job zgłasza warning
+#   file does not contain a valid resource: unable to read file
+# NIE wdrażaj tego pliku w Labie wspólnym — wspólnych datasource'ów nie tworzysz ani nie zmieniasz.
+# Właściwa droga dla datasource'ów: katalog provisioning/datasources/ instancji (Grafana Admin)
+# albo Terraform grafana_data_source. Znacznik loginu podmienia sed.
+apiVersion: 1
+
+datasources:
+  - name: LOGIN-prometheus-git
+    uid: LOGIN-prometheus-git
+    type: prometheus
+    access: proxy
+    url: http://prometheus-and-grafana-kub-prometheus.monitoring.svc.cluster.local:9090
+    editable: false
+    jsonData:
+      timeInterval: 30s

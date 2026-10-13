@@ -1,0 +1,102 @@
+# Szkic potoku "dashboard as code" dla modułu 11 (gcx 1.3.1 + Foundation SDK Go).
+# Skopiuj do .github/workflows/grafana-dashboards.yml w repozytorium o układzie:
+#
+#   sdk/        main.go, go.mod, go.sum   (kopia pliki/11-sdk)
+#   resources/  sdk-<login>.json          (wygenerowany i zacommitowany)
+#
+# PR:           generowanie + kontrola, że resources/ = wynik kodu, lint, validate (dry run na serwerze).
+# push do main: to samo + push do Grafany.
+#
+# Repo → Settings → Secrets and variables → Actions:
+#   vars.GRAFANA_SERVER   https://grafana.example.com (publiczny adres; runner GitHuba nie widzi sieci prywatnej)
+#   vars.LOGIN            nazwa w sdk-<login> i folder uczestnicy-<login>
+#   secrets.GRAFANA_TOKEN token service accountu (Editor na folder docelowy; nie token admina)
+# Job deploy używa environment "grafana" (Settings → Environments): tam ustaw required reviewers
+# i zawęź sekret do gałęzi main.
+#
+# gcx resources push tylko tworzy i aktualizuje. Usunięcie pliku z resources/ NIE usuwa dashboardu:
+# kasujesz go jawnie (gcx resources delete dashboards/<nazwa>).
+
+name: grafana-dashboards
+
+on:
+  pull_request:
+    paths: ["sdk/**", "resources/**", ".github/workflows/grafana-dashboards.yml"]
+  push:
+    branches: [main]
+    paths: ["sdk/**", "resources/**", ".github/workflows/grafana-dashboards.yml"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: grafana-dashboards-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  GCX_VERSION: "1.3.1"
+  GCX_SHA256: "93f708b5582546c8fc9564ab5912e5c49a545be12247833c2b0b80e304c1083f"  # gcx_1.3.1_linux_amd64.tar.gz z gcx_1.3.1_checksums.txt
+  GRAFANA_SERVER: ${{ vars.GRAFANA_SERVER }}
+  GRAFANA_ORG_ID: "1"          # bez niego gcx on-prem: "missing ... org-id or ... stack-id"
+  GCX_TELEMETRY: disabled
+  GCX_KEYCHAIN: "off"          # runner nie ma keychaina
+  LOGIN: ${{ vars.LOGIN }}
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
+        with:
+          go-version-file: sdk/go.mod
+          cache-dependency-path: sdk/go.sum
+
+      - name: Install gcx (pinned + checksum)
+        run: |
+          f="gcx_${GCX_VERSION}_linux_amd64.tar.gz"
+          curl -fsSLO "https://github.com/grafana/gcx/releases/download/v${GCX_VERSION}/${f}"
+          echo "${GCX_SHA256}  ${f}" | sha256sum -c -
+          tar -xzf "$f" gcx
+          sudo install -m 0755 gcx /usr/local/bin/gcx
+          gcx --version
+
+      - name: Generate dashboard JSON
+        working-directory: sdk
+        run: go run . -login "$LOGIN" > "../resources/sdk-${LOGIN}.json"
+
+      - name: resources/ matches the code
+        run: git diff --exit-code -- resources/
+
+      - name: Lint
+        run: gcx dev lint run ./resources          # każde naruszenie (także warning) = exit 4
+
+      - name: Validate (server-side dry run)
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GRAFANA_TOKEN: ${{ secrets.GRAFANA_TOKEN }}  # PR z forka nie dostaje sekretów
+        run: gcx resources validate -p ./resources
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: grafana
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Install gcx (pinned + checksum)
+        run: |
+          f="gcx_${GCX_VERSION}_linux_amd64.tar.gz"
+          curl -fsSLO "https://github.com/grafana/gcx/releases/download/v${GCX_VERSION}/${f}"
+          echo "${GCX_SHA256}  ${f}" | sha256sum -c -
+          tar -xzf "$f" gcx
+          sudo install -m 0755 gcx /usr/local/bin/gcx
+
+      - name: Push
+        env:
+          GRAFANA_TOKEN: ${{ secrets.GRAFANA_TOKEN }}
+        run: |
+          gcx config check
+          gcx resources push -p ./resources --on-error abort

@@ -1,0 +1,70 @@
+# Moduł 9, ćwiczenie 06 — rozwiązanie: korelacje z ćwiczenia 04 jako plik provisioningu.
+#
+# Docelowa postać dla wspólnych datasource'ów Labu wspólnego (uid loki / tempo / prometheus).
+# W ćwiczeniu 04 te same korelacje budujesz w UI na kopiach loki-<login> / tempo-<login> /
+# prometheus-<login>, a w ćwiczeniu 06 eksportujesz je skryptem 09-export-correlations.sh.
+# Porównaj wynik eksportu z tym plikiem: różnią się uid datasource'ów, login w URL Gitei
+# i klucze modelu zapytania dopisane przez edytor Explore (datasource, key, refId, editorMode…).
+#
+# W labie datasource'y (i ich korelacje) generuje chart Helm z wartości
+#   grafana.additionalDataSources
+# Ten plik nie jest tam wdrożony — to wzór „korelacje jako kod".
+#
+# Reguły (lekcja 05):
+#   - korelacje stoją pod datasource'em ŹRÓDŁOWYM i są przypinane po jego nazwie,
+#   - label i description zawsze, choćby pusty description,
+#   - type obok config (nie config.type), transformations w config,
+#   - każde "$" jako "$$" — Grafana rozwija ${…} w plikach provisioningu jako zmienne środowiskowe,
+#   - regex bez ukośników /…/, Grafana dokłada flagi "gi".
+
+apiVersion: 1
+
+datasources:
+  - name: Loki
+    uid: loki
+    type: loki
+    access: proxy
+    url: http://loki-gateway.monitoring.svc.cluster.local
+    correlations:
+      # log payment (stream="otel", linia JSON z "traceid") → trace w Tempo
+      - targetUID: tempo
+        label: Trace w Tempo
+        description: log payment → trace (regex na Line)
+        type: query
+        config:
+          field: Line
+          target:
+            queryType: traceql
+            query: $${traceId}
+          transformations:
+            - type: regex
+              expression: '"traceid":"(\w+)"'
+              mapValue: traceId
+
+      # log Grafany (logfmt, uname=…) → wszystkie wpisy tego użytkownika
+      - targetUID: loki
+        label: Aktywność $${uname}
+        description: log Grafany → wszystkie wpisy tego użytkownika (logfmt)
+        type: query
+        config:
+          field: Line
+          target:
+            expr: '{namespace="monitoring", container="grafana"} | logfmt | uname="$${uname}"'
+            queryType: range
+          transformations:
+            - type: logfmt
+
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus-and-grafana-kub-prometheus.monitoring.svc.cluster.local:9090
+    correlations:
+      # tabela z instant query (kolumna service_name) → nowe issue w Gitei
+      - label: Zgłoś w Gitei
+        description: usługa z błędami → nowe issue
+        type: external
+        config:
+          field: service_name
+          target:
+            url: https://gitea.workshop2.indexoutofrange.com/LOGIN/grafana-dashboards/issues/new?title=Bledy+w+$${service_name}&body=Zrodlo:+Grafana+Explore,+$${__value.raw}

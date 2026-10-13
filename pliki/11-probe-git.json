@@ -1,0 +1,27 @@
+{
+  "apiVersion": "provisioning.grafana.app/v0alpha1",
+  "kind": "Repository",
+  "metadata": {
+    "name": "probe-LOGIN-git"
+  },
+  "spec": {
+    "title": "Sonda LOGIN git (tylko dry run)",
+    "type": "git",
+    "git": {
+      "url": "https://gitea.workshop2.indexoutofrange.com/LOGIN/grafana-dashboards.git",
+      "branch": "main",
+      "path": ""
+    },
+    "sync": {
+      "enabled": true,
+      "target": "folder",
+      "intervalSeconds": 60
+    },
+    "workflows": ["write"]
+  },
+  "secure": {
+    "token": {
+      "create": "sonda-to-nie-jest-prawdziwy-token"
+    }
+  }
+}

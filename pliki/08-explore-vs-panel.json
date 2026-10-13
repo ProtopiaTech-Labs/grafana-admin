@@ -1,0 +1,61 @@
+{
+  "title": "08 — Panel wąski vs szeroki",
+  "description": "Moduł 8, ćwiczenie 02. To samo zapytanie z [$__interval] w panelu o szerokości 6 i 24 kolumn. Plik bez uid — Grafana nada nowy przy imporcie.",
+  "tags": ["szkolenie", "modul-08"],
+  "editable": true,
+  "schemaVersion": 41,
+  "time": { "from": "now-24h", "to": "now" },
+  "refresh": "",
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Wąski",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "editorMode": "code",
+          "expr": "sum(rate(traces_spanmetrics_calls_total{service_name=\"payment\", k8s_namespace_name=\"otel\", status_code=\"STATUS_CODE_ERROR\"}[$__interval]))",
+          "legendFormat": "błędy payment / s",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "reqps" },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["max"] },
+        "tooltip": { "mode": "single" }
+      }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Szeroki",
+      "gridPos": { "x": 0, "y": 9, "w": 24, "h": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "editorMode": "code",
+          "expr": "sum(rate(traces_spanmetrics_calls_total{service_name=\"payment\", k8s_namespace_name=\"otel\", status_code=\"STATUS_CODE_ERROR\"}[$__interval]))",
+          "legendFormat": "błędy payment / s",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "reqps" },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["max"] },
+        "tooltip": { "mode": "single" }
+      }
+    }
+  ]
+}

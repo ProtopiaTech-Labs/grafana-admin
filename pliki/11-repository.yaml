@@ -1,0 +1,28 @@
+# Moduł 11, ćwiczenie 05, ⭐Stretch: repozytorium GitHub jako zasób Repository,
+# wypychane przez gcx. Znaczniki podmieniasz sed-em w katalogu tymczasowym
+# (plik z tokenem nie trafia do żadnego repozytorium):
+#   LOGIN        -> Twój login w Labie wspólnym
+#   GH_REPO_URL  -> https://github.com/<konto>/<repozytorium>
+#   GH_TOKEN     -> fine-grained PAT (Contents RW, Pull requests RW, Webhooks RW,
+#                   Metadata R, Administration R) tylko dla tego repozytorium
+# Typ github rejestruje webhook na publicznym root_url labu; Pure Git (Gitea) tylko polluje.
+apiVersion: provisioning.grafana.app/v0alpha1
+kind: Repository
+metadata:
+  name: LOGIN-gh
+spec:
+  title: LOGIN-gh
+  description: Moduł 11, ⭐Stretch — GitHub z webhookiem. Usuń zaraz po pomiarze.
+  type: github
+  github:
+    url: GH_REPO_URL
+    branch: main
+  sync:
+    enabled: true
+    target: folder
+    intervalSeconds: 60
+  workflows:
+    - write
+secure:
+  token:
+    create: GH_TOKEN

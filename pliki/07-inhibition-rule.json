@@ -1,0 +1,37 @@
+{
+  "apiVersion": "notifications.alerting.grafana.app/v1beta1",
+  "kind": "InhibitionRule",
+  "metadata": {
+    "name": "LOGIN-critical-tlumi-warning",
+    "namespace": "default"
+  },
+  "spec": {
+    "source_matchers": [
+      {
+        "label": "owner",
+        "type": "=",
+        "value": "LOGIN"
+      },
+      {
+        "label": "severity",
+        "type": "=",
+        "value": "critical"
+      }
+    ],
+    "target_matchers": [
+      {
+        "label": "owner",
+        "type": "=",
+        "value": "LOGIN"
+      },
+      {
+        "label": "severity",
+        "type": "=",
+        "value": "warning"
+      }
+    ],
+    "equal": [
+      "service_name"
+    ]
+  }
+}

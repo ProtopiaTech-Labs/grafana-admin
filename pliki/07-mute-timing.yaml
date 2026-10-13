@@ -1,0 +1,13 @@
+# Wzorzec mute timingu z ćwiczenia 06 w formacie plików provisioningu
+# (ten sam format zwraca /api/v1/provisioning/mute-timings/export).
+# LOGIN = Twój login. Godziny ustawiasz tak, żeby okno obejmowało czas ćwiczenia;
+# bez location okno liczy się w UTC.
+apiVersion: 1
+muteTimes:
+  - orgId: 1
+    name: LOGIN-maintenance
+    time_intervals:
+      - times:
+          - start_time: '14:00'
+            end_time: '17:00'
+        location: Europe/Warsaw

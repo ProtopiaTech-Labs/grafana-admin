@@ -1,0 +1,31 @@
+<!doctype html>
+<!--
+  Modul 10, cwiczenie 12 (Stretch): panel Grafany w iframe.
+  Otwierasz plik z dysku (file://), iframe wskazuje Grafane Labu wspolnego.
+  Strona z dysku i grafana.workshop2.indexoutofrange.com to rozne "site", wiec cookie
+  sesji z SameSite=Lax nie idzie do iframe: tak samo jak na produkcji, gdzie strona
+  i Grafana stoja w roznych domenach.
+  Parametry: ?uid=<uid dashboardu>&panelId=<id>&grafana=<adres Grafany>
+-->
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <title>M10 embed</title>
+  <style>body { font-family: sans-serif; margin: 2rem; } iframe { border: 1px solid #ccc; }</style>
+</head>
+<body>
+  <h1>Panel z Grafany w iframe</h1>
+  <p>Grafana: <code id="grafana"></code>. Dashboard: <code id="uid"></code> (parametr <code>?uid=raport-dzienny-&lt;login&gt;</code>).</p>
+  <iframe id="panel" width="800" height="400" frameborder="0"></iframe>
+  <script>
+    const p = new URLSearchParams(location.search);
+    const grafana = (p.get('grafana') || 'https://grafana.workshop2.indexoutofrange.com').replace(/\/$/, '');
+    const uid = p.get('uid') || 'raport-dzienny';
+    const panelId = p.get('panelId') || '4';
+    document.getElementById('grafana').textContent = grafana;
+    document.getElementById('uid').textContent = uid;
+    document.getElementById('panel').src = grafana + '/d-solo/' + encodeURIComponent(uid)
+      + '?orgId=1&panelId=' + encodeURIComponent(panelId) + '&from=now-6h&to=now&theme=light';
+  </script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+{
+  "uid": "LOGIN-ruch-uslug",
+  "name": "Ruch usług (LOGIN)",
+  "kind": 1,
+  "folderUid": "FOLDER_UID",
+  "model": {
+    "type": "timeseries",
+    "title": "Ruch usług",
+    "description": "Library panel z ćwiczenia 18 modułu 3. Model zarządzany przez API i trzymany w Git.",
+    "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+    },
+    "targets": [
+      {
+        "refId": "A",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "editorMode": "code",
+        "expr": "sum by (service_name) (rate(traces_spanmetrics_calls_total{span_kind=\"SPAN_KIND_SERVER\"}[$__rate_interval]))",
+        "legendFormat": "{{service_name}}",
+        "range": true
+      }
+    ],
+    "fieldConfig": {
+      "defaults": {
+        "unit": "reqps",
+        "color": {
+          "mode": "palette-classic-by-name"
+        }
+      },
+      "overrides": []
+    },
+    "options": {
+      "legend": {
+        "displayMode": "list",
+        "placement": "bottom",
+        "calcs": []
+      },
+      "tooltip": {
+        "mode": "multi",
+        "sort": "desc"
+      }
+    }
+  }
+}

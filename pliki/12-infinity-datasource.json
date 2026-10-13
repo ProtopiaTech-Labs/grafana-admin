@@ -1,0 +1,11 @@
+{
+  "name": "LOGIN-nbp",
+  "uid": "nbp-LOGIN",
+  "type": "yesoreyeram-infinity-datasource",
+  "access": "proxy",
+  "isDefault": false,
+  "jsonData": {
+    "auth_method": "none",
+    "allowedHosts": ["https://api.nbp.pl"]
+  }
+}

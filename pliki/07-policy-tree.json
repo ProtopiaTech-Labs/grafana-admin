@@ -1,0 +1,51 @@
+{
+  "apiVersion": "notifications.alerting.grafana.app/v1beta1",
+  "kind": "RoutingTree",
+  "metadata": {
+    "name": "LOGIN",
+    "namespace": "default"
+  },
+  "spec": {
+    "defaults": {
+      "receiver": "LOGIN-webhook",
+      "group_by": [
+        "grafana_folder",
+        "alertname"
+      ],
+      "group_wait": "30s",
+      "group_interval": "5m",
+      "repeat_interval": "4h"
+    },
+    "routes": [
+      {
+        "matchers": [
+          {
+            "label": "severity",
+            "type": "=",
+            "value": "critical"
+          }
+        ],
+        "receiver": "LOGIN-critical",
+        "continue": false,
+        "group_by": [
+          "service_name"
+        ],
+        "group_wait": "10s"
+      },
+      {
+        "matchers": [
+          {
+            "label": "severity",
+            "type": "=",
+            "value": "warning"
+          }
+        ],
+        "receiver": "LOGIN-warning",
+        "continue": false,
+        "mute_time_intervals": [
+          "LOGIN-maintenance"
+        ]
+      }
+    ]
+  }
+}

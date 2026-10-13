@@ -1,0 +1,46 @@
+# Eksport recording rule z ćwiczenia 12 modułu 7 w formacie pliku provisioningu
+# (GET /api/v1/provisioning/alert-rules/<uid>/export?format=yaml).
+#
+# Twój eksport różni się od tego pliku:
+#   - `uid` (UI nadaje losowy; tu stały, żeby plik dało się też wgrać z dysku),
+#   - login zamiast LOGIN,
+#   - pola modelu zapytania dopisywane przez edytor (`datasource`, `editorMode`, `intervalMs`,
+#     `legendFormat`, `maxDataPoints`), jeśli wpisałeś zapytanie inaczej niż w ćwiczeniu.
+#
+# Zapytanie czyta datasource `prometheus`, wynik zapisuje remote write do `mimir`
+# (Prometheus type Mimir -> http://mimir-gateway.monitoring.svc.cluster.local:80/api/v1/push).
+# Recording rule nie ma `condition`, `noDataState`, `execErrState`, `for` ani powiadomień.
+apiVersion: 1
+groups:
+    - orgId: 1
+      name: LOGIN-recording
+      folder: Uczestnicy/LOGIN
+      interval: 1m
+      rules:
+        - uid: LOGIN-error-ratio-rec
+          title: LOGIN:service_error_ratio:rate5m
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: prometheus
+              model:
+                datasource:
+                    type: prometheus
+                    uid: prometheus
+                editorMode: code
+                expr: sum by (service_name) (rate(traces_spanmetrics_calls_total{k8s_namespace_name="otel", status_code="STATUS_CODE_ERROR"}[5m])) / sum by (service_name) (rate(traces_spanmetrics_calls_total{k8s_namespace_name="otel"}[5m]))
+                instant: true
+                intervalMs: 1000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+          labels:
+            owner: LOGIN
+          isPaused: false
+          record:
+            metric: LOGIN:service_error_ratio:rate5m
+            from: A
+            targetDatasourceUid: mimir

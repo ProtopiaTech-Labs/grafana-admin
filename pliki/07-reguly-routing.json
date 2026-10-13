@@ -1,0 +1,162 @@
+{
+  "title": "LOGIN-routing",
+  "interval": 60,
+  "rules": [
+    {
+      "uid": "LOGIN-bledy-critical",
+      "title": "LOGIN-bledy-critical",
+      "folderUID": "uczestnicy-LOGIN",
+      "ruleGroup": "LOGIN-routing",
+      "condition": "C",
+      "for": "1m",
+      "noDataState": "OK",
+      "execErrState": "Error",
+      "isPaused": false,
+      "labels": {
+        "owner": "LOGIN",
+        "severity": "critical",
+        "__grafana_managed_route__": "LOGIN"
+      },
+      "annotations": {
+        "summary": "{{ $labels.service_name }}: {{ humanizePercentage $values.B.Value }} błędów (próg critical)"
+      },
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": {
+            "from": 600,
+            "to": 0
+          },
+          "datasourceUid": "prometheus",
+          "model": {
+            "refId": "A",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "expr": "sum by (service_name) (rate(traces_spanmetrics_calls_total{k8s_namespace_name=\"otel\", span_kind=\"SPAN_KIND_SERVER\", status_code=\"STATUS_CODE_ERROR\"}[5m])) / sum by (service_name) (rate(traces_spanmetrics_calls_total{k8s_namespace_name=\"otel\", span_kind=\"SPAN_KIND_SERVER\"}[5m]))",
+            "instant": true,
+            "range": false,
+            "intervalMs": 1000,
+            "maxDataPoints": 43200
+          }
+        },
+        {
+          "refId": "B",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "B",
+            "datasource": {
+              "type": "__expr__",
+              "uid": "__expr__"
+            },
+            "type": "reduce",
+            "expression": "A",
+            "reducer": "last"
+          }
+        },
+        {
+          "refId": "C",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "C",
+            "datasource": {
+              "type": "__expr__",
+              "uid": "__expr__"
+            },
+            "type": "threshold",
+            "expression": "B",
+            "conditions": [
+              {
+                "evaluator": {
+                  "type": "gt",
+                  "params": [
+                    0.2
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "uid": "LOGIN-bledy-warning",
+      "title": "LOGIN-bledy-warning",
+      "folderUID": "uczestnicy-LOGIN",
+      "ruleGroup": "LOGIN-routing",
+      "condition": "C",
+      "for": "1m",
+      "noDataState": "OK",
+      "execErrState": "Error",
+      "isPaused": false,
+      "labels": {
+        "owner": "LOGIN",
+        "severity": "warning",
+        "__grafana_managed_route__": "LOGIN"
+      },
+      "annotations": {
+        "summary": "{{ $labels.service_name }}: {{ humanizePercentage $values.B.Value }} błędów (próg warning)"
+      },
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": {
+            "from": 600,
+            "to": 0
+          },
+          "datasourceUid": "prometheus",
+          "model": {
+            "refId": "A",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "expr": "sum by (service_name) (rate(traces_spanmetrics_calls_total{k8s_namespace_name=\"otel\", span_kind=\"SPAN_KIND_SERVER\", status_code=\"STATUS_CODE_ERROR\"}[5m])) / sum by (service_name) (rate(traces_spanmetrics_calls_total{k8s_namespace_name=\"otel\", span_kind=\"SPAN_KIND_SERVER\"}[5m]))",
+            "instant": true,
+            "range": false,
+            "intervalMs": 1000,
+            "maxDataPoints": 43200
+          }
+        },
+        {
+          "refId": "B",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "B",
+            "datasource": {
+              "type": "__expr__",
+              "uid": "__expr__"
+            },
+            "type": "reduce",
+            "expression": "A",
+            "reducer": "last"
+          }
+        },
+        {
+          "refId": "C",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "C",
+            "datasource": {
+              "type": "__expr__",
+              "uid": "__expr__"
+            },
+            "type": "threshold",
+            "expression": "B",
+            "conditions": [
+              {
+                "evaluator": {
+                  "type": "gt",
+                  "params": [
+                    0.05
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

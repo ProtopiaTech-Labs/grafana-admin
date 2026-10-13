@@ -1,0 +1,48 @@
+# Walkthrough: dwa providery dashboardów z różną polityką zapisu i usuwania.
+# Do czytania (ćwiczenie 02 modułu 11, ⭐Stretch). Nie wdrażasz.
+# Plik leży w <provisioning>/dashboards/*.yaml; JSON-y dashboardów w options.path.
+#
+# Zachowania (pkg/services/provisioning/dashboards):
+#   name                   tożsamość providera: dashboardy providera, którego nazwy już nie ma
+#                          w konfiguracji, Grafana kasuje jako sieroty, a nowy provider tworzy
+#                          je od nowa (najpierw usunięcie, potem utworzenie; stałe uid zostają)
+#   updateIntervalSeconds  > 10: polling katalogu co N s; <= 10: zdarzenia systemu plików
+#                          (bind mounty i sieciowe FS mogą ich nie dostarczać); brak = 10;
+#                          gdy watch się nie uda, Grafana przechodzi na polling co 30 s
+#   allowUiUpdates         false: Save w UI otwiera szufladę z JSON-em do skopiowania;
+#                          true: zapis z UI trafia do bazy i żyje do następnej zmiany pliku
+#   disableDeletion        false: plik zniknął -> dashboard usunięty;
+#                          true: plik zniknął -> dashboard zostaje, ale przestaje być provisioned
+#   foldersFromFilesStructure  katalogi = foldery (maks. 4 poziomy); wymaga pustych folder
+#                          i folderUid, więc UID folderów generuje Grafana
+#   editable               klucz z datasource'ów; w providerze dashboardów nie działa
+#                          (Lab wspólny ma go w providerach PostgreSQL i Redis)
+#
+# Plik dashboardu: classic JSON ze stałym "uid" (reusable URL) albo zasób K8s
+# (apiVersion dashboard.grafana.app/v1 lub v2, metadata.name = UID). Dashboard v2 tylko
+# w formacie zasobu K8s. Zmienne środowiskowe działają w tym pliku, nie w JSON-ach.
+apiVersion: 1
+
+providers:
+  # Dashboardy zespołów z repozytorium: układ katalogów = drzewo folderów.
+  - name: team-dashboards
+    orgId: 1
+    type: file
+    disableDeletion: false
+    allowUiUpdates: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards/teams
+      foldersFromFilesStructure: true
+
+  # Dashboardy platformowe: jeden folder ze stałym UID, edycja awaryjna z UI dozwolona.
+  - name: platform-dashboards
+    orgId: 1
+    type: file
+    folder: Platforma
+    folderUid: platforma
+    disableDeletion: true
+    allowUiUpdates: true
+    updateIntervalSeconds: 10
+    options:
+      path: /var/lib/grafana/dashboards/platform

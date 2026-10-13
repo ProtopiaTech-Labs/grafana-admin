@@ -1,0 +1,37 @@
+# Wzorzec contact pointów modułu 7 w formacie plików provisioningu
+# (provisioning/alerting, ten sam format zwraca /api/v1/provisioning/contact-points/export).
+# LOGIN = Twój login, WT_UUID = UUID Twojej sesji webhook-testera.
+# Ćwiczenie 06 tworzy contact pointy LOGIN-critical i LOGIN-warning w UI,
+# LOGIN-webhook pochodzi z ćwiczenia 02. W Labie wspólnym nie wgrywasz tego pliku.
+apiVersion: 1
+contactPoints:
+  - orgId: 1
+    name: LOGIN-webhook
+    receivers:
+      - uid: LOGIN-webhook
+        type: webhook
+        disableResolveMessage: false
+        settings:
+          url: http://webhook-tester.monitoring.svc.cluster.local/WT_UUID
+          httpMethod: POST
+  - orgId: 1
+    name: LOGIN-critical
+    receivers:
+      - uid: LOGIN-critical
+        type: webhook
+        disableResolveMessage: false
+        settings:
+          url: http://webhook-tester.monitoring.svc.cluster.local/WT_UUID/critical
+          httpMethod: POST
+          title: '[{{ .Status | toUpper }}] critical {{ .GroupLabels.service_name }}'
+          message: '{{ template "LOGIN.message" . }}'
+  - orgId: 1
+    name: LOGIN-warning
+    receivers:
+      - uid: LOGIN-warning
+        type: webhook
+        disableResolveMessage: false
+        settings:
+          url: http://webhook-tester.monitoring.svc.cluster.local/WT_UUID/warning
+          httpMethod: POST
+          message: '{{ template "LOGIN.message" . }}'

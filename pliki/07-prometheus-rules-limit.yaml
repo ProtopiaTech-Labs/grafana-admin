@@ -1,0 +1,27 @@
+# Wariant z `limit` (moduł 7, ćwiczenie 12, krok 7).
+#
+# Prometheus obsługuje `limit` w grupie: po przekroczeniu liczby alertów
+# (dla reguł alertów) albo serii (dla recording rules) cała ewaluacja grupy
+# kończy się błędem. Grafana-managed rules nie mają odpowiednika, więc import
+# przez /api/convert/ odrzuca grupę z HTTP 400 i komunikatem `limit is not supported`.
+# Odrzucony jest cały request, dlatego ten wariant leży w osobnym pliku.
+#
+# LOGIN zamieniasz na swój login, np.:
+#   sed "s/LOGIN/$LOGIN/g" pliki/07-prometheus-rules-limit.yaml
+groups:
+  - name: LOGIN-application-limit
+    interval: 1m
+    limit: 10
+    rules:
+      - alert: ServiceHighErrorRate
+        expr: |
+          sum(rate(traces_spanmetrics_calls_total{status_code="STATUS_CODE_ERROR"}[5m])) by (service_name)
+          /
+          sum(rate(traces_spanmetrics_calls_total[5m])) by (service_name) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          owner: LOGIN
+        annotations:
+          summary: Service has high error rate
+          description: Service {{ $labels.service_name }} has {{ $value | humanizePercentage }} error rate.

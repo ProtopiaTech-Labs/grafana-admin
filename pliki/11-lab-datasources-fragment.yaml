@@ -1,0 +1,125 @@
+# Fragment pliku provisioningu datasource'ów Labu wspólnego (Grafana 13.2.2).
+#
+# Skąd: ConfigMap monitoring/prometheus-and-grafana-kub-grafana-datasource, klucz datasource.yaml,
+# etykieta grafana_datasource=1. Sidecar grafana-sc-datasources kopiuje go do
+# /etc/grafana/provisioning/datasources/ w podzie Grafany.
+# Wpisy oznaczone [chart] generuje sam kube-prometheus-stack. Reszta pochodzi z
+# grafana.additionalDataSources w wartościach chartu Helm labu
+# (Helm renderuje je toYaml, więc klucze są posortowane alfabetycznie).
+#
+# Skrócone: pominięte wpisy Alertmanager [chart], Mimir, Pyroscope, Redis, Alertmanager
+# oraz część jsonData i korelacji Tempo. Hasło PostgreSQL zamaskowane.
+# Do czytania (ćwiczenie 02 modułu 11), nie wdrażasz.
+apiVersion: 1
+datasources:
+# [chart] pierwszy wpis "Prometheus"
+- name: "Prometheus"
+  type: prometheus
+  uid: prometheus
+  url: http://prometheus-and-grafana-kub-prometheus.monitoring:9090/
+  access: proxy
+  isDefault: true
+  jsonData:
+    httpMethod: POST
+    timeInterval: 30s
+- access: proxy
+  editable: true
+  isDefault: false
+  jsonData:
+    derivedFields:
+    - datasourceUid: tempo
+      matcherRegex: traceID=(\w+)
+      name: TraceID
+      url: $${__value.raw}
+    maxLines: 1000
+    timeout: 600
+  name: Loki
+  type: loki
+  uid: loki
+  url: http://loki-gateway.monitoring.svc.cluster.local
+- access: proxy
+  correlations:
+  - config:
+      field: tags
+      target:
+        editorMode: code
+        format: table
+        rawQuery: true
+        rawSql: SELECT COUNT(*) FROM $$beast;
+        refId: A
+      transformations:
+      - expression: .*{"value":"(.*?)","key":"beast".*}
+        mapValue: beast
+        type: regex
+      type: query
+    description: ""
+    label: Count $$beast in table
+    targetUID: postgres
+  # [...] trzy kolejne korelacje: "$$statement in Postgres", "hget $$key", "get $$key"
+  editable: true
+  isDefault: false
+  jsonData:
+    httpMethod: GET
+    serviceMap:
+      datasourceUid: prometheus
+    # [...] streamingEnabled, nodeGraph, search, tracesToLogs, tracesToLogsV2
+    tracesToMetrics:
+      datasourceUid: prometheus
+      queries:
+      - name: Latency buckets
+        query: sum(rate(traces_spanmetrics_latency_bucket{$$__tags}[5m]))
+      spanEndTimeShift: 1h
+      spanStartTimeShift: -1h
+      tags:
+      - key: service.name
+        value: service
+      - key: k8s.namespace.name
+        value: k8s_namespace_name
+    tracesToProfiles:
+      customQuery: true
+      datasourceUid: pyroscope
+      profileTypeId: process_cpu:cpu:nanoseconds:cpu:nanoseconds
+      query: '{service_name="$${__span.tags["k8s.namespace.name"]}.$${__span.tags["service.name"]}"}'
+      spanEndTimeShift: 5m
+      spanStartTimeShift: -5m
+      tags: []
+  name: Tempo
+  timeout: 120
+  type: tempo
+  uid: tempo
+  url: http://tempo-query-frontend.monitoring.svc.cluster.local:3200
+- access: proxy
+  editable: true
+  isDefault: false
+  jsonData:
+    connMaxLifetime: 14400
+    database: otel
+    maxIdleConns: 2
+    maxOpenConns: 5
+    sslmode: disable
+  name: PostgreSQL
+  secureJsonData:
+    password: '<zamaskowane>'
+  type: postgres
+  uid: postgres
+  url: postgresql.otel.svc.cluster.local:5432
+  user: otelu
+# drugi wpis o nazwie "Prometheus" (additionalDataSources)
+- access: proxy
+  editable: true
+  isDefault: false
+  jsonData:
+    exemplarTraceIdDestinations:
+    - datasourceUid: tempo
+      name: traceID
+    httpMethod: POST
+  name: Prometheus
+  type: prometheus
+  uid: prometheus
+  url: http://prometheus-and-grafana-kub-prometheus.monitoring.svc.cluster.local:9090
+- access: proxy
+  editable: false
+  isDefault: false
+  name: TestData
+  type: grafana-testdata-datasource
+  uid: testdata

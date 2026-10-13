@@ -1,0 +1,48 @@
+apiVersion: 1
+
+datasources:
+  - name: Loki
+    uid: loki
+    type: loki
+    access: proxy
+    url: http://loki-gateway.monitoring.svc.cluster.local
+    correlations:
+      - targetUID: tempo
+        label: Trace w Tempo
+        description: log payment → trace (regex na Line)
+        type: query
+        config:
+          field: Line
+          target:
+            queryType: traceql
+            query: ${traceId}
+          transformations:
+            - type: regex
+              expression: '/"traceid":"(\w+)"/'
+              mapValue: traceId
+
+      - targetUID: loki
+        label: Aktywność $${uname}
+        description: log Grafany → wszystkie wpisy tego użytkownika (logfmt)
+        type: query
+        config:
+          field: line
+          target:
+            expr: '{namespace="monitoring", container="grafana"} | logfmt | uname="$${uname}"'
+            queryType: range
+          transformations:
+            - type: logfmt
+
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus-and-grafana-kub-prometheus.monitoring.svc.cluster.local:9090
+    correlations:
+      - label: Zgłoś w Gitei
+        description: usługa z błędami → nowe issue
+        config:
+          type: external
+          field: service_name
+          target:
+            url: https://gitea.workshop2.indexoutofrange.com/LOGIN/grafana-dashboards/issues/new?title=Bledy+w+$${service_name}&body=Zrodlo:+Grafana+Explore,+$${__value.raw}
